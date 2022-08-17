@@ -25,7 +25,7 @@ class YOLO(object):
         #   验证集损失较低不代表mAP较高，仅代表该权值在验证集上泛化性能较好。
         #   如果出现shape不匹配，同时要注意训练时的model_path和classes_path参数的修改
         #--------------------------------------------------------------------------#
-        "model_path"        : 'model_data/yolox_nano.pth',
+        "model_path"        : 'model_data/yolox_x.pth',
         "classes_path"      : 'model_data/coco_classes.txt',
         #---------------------------------------------------------------------#
         #   输入图片的大小，必须为32的倍数。
@@ -34,7 +34,7 @@ class YOLO(object):
         #---------------------------------------------------------------------#
         #   所使用的YoloX的版本。nano、tiny、s、m、l、x
         #---------------------------------------------------------------------#
-        "phi"               : 'nano',
+        "phi"               : 'x',
         #---------------------------------------------------------------------#
         #   只有得分大于置信度的预测框会被保留下来
         #---------------------------------------------------------------------#
@@ -130,9 +130,20 @@ class YOLO(object):
             #---------------------------------------------------------#
             #   将图像输入网络当中进行预测！
             #---------------------------------------------------------#
-            start = time.time()
+            print(f"============= warming up =============")
+            _ = self.net(images)
+            _ = self.net(images)
+            _ = self.net(images)
+            torch.cuda.synchronize()
+            print(f"============= inference ============")
+            starter = torch.cuda.Event(enable_timing=True)
+            ender = torch.cuda.Event(enable_timing=True)
+            starter.record()
             outputs = self.net(images)
-            print(f"\tself.net: {time.time() - start}")
+            ender.record()
+            torch.cuda.synchronize()
+            delta = starter.elapsed_time(ender)/1000
+            print(f"\tself.net: {delta}")
             start = time.time()
             outputs = decode_outputs(outputs, self.input_shape)
             print(f"\tdecode_outputs: {time.time() - start}")
